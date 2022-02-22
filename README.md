@@ -6,6 +6,6 @@ Visualizing Pittsburgh
 
 ### Allegheny County
 
-- [Building footprints](https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1195) (shapefile)
-- [Parcels](https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214) (shapefile)
+- [Building footprints](https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1195) (spatial vector)
+- [Parcels](https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214) (spatial vector)
 - [Property assessments](https://data.wprdc.org/dataset/property-assessments) (csv only)
