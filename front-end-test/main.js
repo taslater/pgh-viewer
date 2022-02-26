@@ -45,7 +45,7 @@ function showInfo(event) {
     return;
   }
   const properties = features[0].getProperties();
-  //info.innerText = JSON.stringify(properties, null, 2);
-  console.log(properties);
+  info.innerText = JSON.stringify(properties, null, 2);
+  //console.log(properties);
   info.style.opacity = 1;
 }
