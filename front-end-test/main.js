@@ -17,8 +17,7 @@ const alle_layer = new ol.layer.VectorTile({
   }),
 });
 
-// console.log(alle_layer)
-console.log(alle_layer.getFeatures());
+
 
 const map = new ol.Map({
   target: "map",

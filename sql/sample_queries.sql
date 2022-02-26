@@ -35,3 +35,24 @@ WHERE ST_Intersects(
 	ST_MakeEnvelope(1300000, 400000, 1310000, 401000, 2272),
 	geom
 );
+
+
+WITH geomtable AS
+(WITH centroids AS
+(SELECT
+	ST_Centroid(footprints.geom) AS ft_centroid,
+ 	footprints.gid AS gid,
+ 	footprints.geom AS ft_geom
+FROM footprints
+LIMIT 10)
+SELECT
+	parcels.pin AS parid, centroids.ft_geom, centroids.gid
+FROM centroids
+INNER JOIN parcels ON ST_Contains(parcels.geom, centroids.ft_centroid))
+SELECT
+	geomtable.parid,
+	geomtable.gid,
+	assessments.*,
+	geomtable.ft_geom
+FROM geomtable
+INNER JOIN assessments ON assessments.parid = geomtable.parid
