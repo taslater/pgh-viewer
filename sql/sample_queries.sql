@@ -60,10 +60,10 @@ INNER JOIN assessments ON assessments.parid = geomtable.parid
 -- Add centroids column to footprints with spatial index
 BEGIN;
 
-ALTER TABLE footprints ADD COLUMN centroids geometry(Geometry,2272);
+ALTER TABLE footprints ADD COLUMN centroid geometry(Geometry,2272);
 
-UPDATE footprints SET centroids = ST_Centroid(footprints.geom);
+UPDATE footprints SET centroid = ST_Centroid(footprints.geom);
 
-CREATE INDEX centroids_geom_idx ON footprints USING GIST(centroids);
+CREATE INDEX centroid_geom_idx ON footprints USING GIST(centroid);
 
 COMMIT;
