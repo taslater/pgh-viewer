@@ -26,7 +26,7 @@ const map = new ol.Map({
     new ol.layer.Tile({
       source: new ol.source.OSM(),
     }),
-    // alle_layer,
+    alle_layer,
   ],
   view: new ol.View({
     center: ol.proj.fromLonLat([-79.995888, 40.440624]),
