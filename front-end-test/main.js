@@ -17,7 +17,8 @@ const alle_layer = new ol.layer.VectorTile({
   }),
 });
 
-
+// console.log(alle_layer)
+console.log(alle_layer);
 
 const map = new ol.Map({
   target: "map",
@@ -32,3 +33,19 @@ const map = new ol.Map({
     zoom: 14,
   }),
 });
+
+map.on("pointermove", showInfo);
+const info = document.getElementById("info");
+
+function showInfo(event) {
+  const features = map.getFeaturesAtPixel(event.pixel);
+  if (features.length == 0) {
+    info.innerText = "";
+    info.style.opacity = 0;
+    return;
+  }
+  const properties = features[0].getProperties();
+  info.innerText = JSON.stringify(properties, null, 2);
+  //console.log(properties);
+  info.style.opacity = 1;
+}
