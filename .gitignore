@@ -3,4 +3,5 @@
 .DS_Store?
 ._*
 secrets.py
+secrets.js
 .vscode
