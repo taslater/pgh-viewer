@@ -67,3 +67,14 @@ UPDATE footprints SET centroid = ST_Centroid(footprints.geom);
 CREATE INDEX centroid_geom_idx ON footprints USING GIST(centroid);
 
 COMMIT;
+
+-- Associate each footprint with intersecting parcels
+SELECT
+	footprints.gid AS foot_gid,
+	COUNT (parcels.gid) AS parcels_count,
+	ARRAY_AGG (parcels.gid) AS parcel_gids
+FROM footprints
+JOIN parcels
+ON ST_Intersects(footprints.geom, parcels.geom)
+GROUP BY foot_gid
+ORDER BY foot_gid;
