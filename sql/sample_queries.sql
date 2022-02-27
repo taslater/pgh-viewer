@@ -79,13 +79,15 @@ ON ST_Intersects(footprints.geom, parcels.geom)
 GROUP BY foot_gid
 ORDER BY foot_gid;
 
--- Get table of footprint-parcel intersections with area ratios
+-- Get table of footprint-parcel intersections with area ratios and abs area
 SELECT
 	footprints.gid AS foot_gid,
 	parcels.gid AS parcel_gid,
 	ST_Area(ST_Intersection(footprints.geom, parcels.geom)) / ST_Area(footprints.geom) AS foot_pct,
 	ST_Area(ST_Intersection(footprints.geom, parcels.geom)) / ST_Area(parcels.geom) AS parcel_pct,
+	ST_Area(ST_Intersection(footprints.geom, parcels.geom)) AS inter_area,
 	ST_Intersection(footprints.geom, parcels.geom) AS inter_geom
 FROM footprints
 JOIN parcels
 ON ST_Intersects(footprints.geom, parcels.geom);
+-- TO DO: ANALYZE EFFICIENCY USING EXPLAIN ANALYZE
