@@ -2,6 +2,7 @@
 .DS_Store
 .DS_Store?
 ._*
+secrets*
 secrets.py
 secrets.js
 .vscode
