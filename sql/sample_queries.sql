@@ -91,3 +91,11 @@ FROM footprints
 JOIN parcels
 ON ST_Intersects(footprints.geom, parcels.geom);
 -- TO DO: ANALYZE EFFICIENCY USING EXPLAIN ANALYZE
+
+
+-- Get parcels with duplicate geometries
+SELECT
+	array_agg(gid) AS dup_geom_gids
+FROM parcels
+GROUP BY geom
+HAVING COUNT(geom) > 1;
