@@ -113,3 +113,39 @@ GROUP BY geom;
 ALTER TABLE parcels_reduced ADD COLUMN gid SERIAL PRIMARY KEY;
 
 COMMIT;
+
+-- Silly nested option to create intersections table
+BEGIN;
+
+WITH subtable_2 AS (
+	WITH subtable_1 AS (
+		SELECT
+			footprints.gid AS foot_gid,
+			parcels_reduced.pins AS pins,
+			footprints.geom AS foot_geom,
+			parcels_reduced.geom AS parcel_geom
+		FROM footprints
+		JOIN parcels_reduced
+		ON ST_Intersects(footprints.geom, parcels_reduced.geom))
+	SELECT
+		foot_gid,
+		pins,
+		ST_Intersection(foot_geom, parcel_geom) AS geom,
+		foot_geom,
+		parcel_geom
+	FROM subtable_1)
+SELECT 
+	foot_gid,
+	pins,
+	ST_Area(geom) AS area,
+	ST_Area(foot_geom) AS foot_area,
+	ST_Area(parcel_geom) AS parcel_area,
+	geom
+INTO intersections_reduced
+FROM subtable_2;
+
+ALTER TABLE intersections_reduced ADD COLUMN gid SERIAL PRIMARY KEY;
+
+CREATE INDEX geom_idx ON intersections_reduced USING GIST(geom);
+
+COMMIT;
