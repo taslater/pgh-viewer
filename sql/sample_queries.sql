@@ -99,3 +99,17 @@ SELECT
 FROM parcels
 GROUP BY geom
 HAVING COUNT(geom) > 1;
+
+-- New table grouping duplicate parcel geometries
+BEGIN;
+
+SELECT
+	array_agg(pin) AS pins,
+	geom
+INTO parcels_reduced
+FROM parcels
+GROUP BY geom;
+
+ALTER TABLE parcels_reduced ADD COLUMN gid SERIAL PRIMARY KEY;
+
+COMMIT;
