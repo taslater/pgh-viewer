@@ -149,3 +149,50 @@ ALTER TABLE intersections_reduced ADD COLUMN gid SERIAL PRIMARY KEY;
 CREATE INDEX geom_idx ON intersections_reduced USING GIST(geom);
 
 COMMIT;
+
+-- A monstrosity to find monstrosities
+-- Gets the top ten messiest building/parcel intersections
+
+-- Gets the group of parcels that intersect each footprint
+WITH grouped_parcels AS (
+	SELECT
+		foot_gid,
+		ST_Collect(array_agg(parcels.geom)) AS geoms
+	FROM intersections
+	JOIN parcels
+	ON parcels.gid = intersections.parcel_gid
+	GROUP BY foot_gid
+),
+-- Get the top ten messiest footprint intersections based on:
+-- 1. intersects multiple parcels
+-- 2. largest intersection area that is:
+--    a) less than 10% of its parcel area
+--    a) less than 10% of its footprint area
+-- 
+-- In other words, find the biggest intersections that are
+-- just a small piece of the parent footprint and parent parcel
+-- and return that footprint and the parcels that divide it.
+weird_intersections AS (
+	-- Gets footprints that intersect more than one parcel
+	WITH divided_foots AS (
+		SELECT foot_gid
+		FROM intersections_reduced
+		GROUP BY foot_gid
+		HAVING COUNT(*) > 1
+	)
+	SELECT intersections_reduced.foot_gid
+	FROM intersections_reduced
+	INNER JOIN divided_foots
+	ON divided_foots.foot_gid = intersections_reduced.gid
+	WHERE area/foot_area < 0.1
+	AND area/parcel_area < 0.1
+	ORDER BY area DESC
+	LIMIT 10)
+SELECT
+	footprints.geom AS foot_geom,
+	grouped_parcels.geoms AS parcels_geoms
+FROM weird_intersections
+JOIN footprints
+ON weird_intersections.foot_gid = footprints.gid
+JOIN grouped_parcels
+ON grouped_parcels.foot_gid = footprints.gid;
