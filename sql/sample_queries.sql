@@ -196,3 +196,23 @@ JOIN footprints
 ON weird_intersections.foot_gid = footprints.gid
 JOIN grouped_parcels
 ON grouped_parcels.foot_gid = footprints.gid;
+
+-- finally fast intersections
+SET max_parallel_workers = 8;
+SET max_parallel_workers_per_gather = 4;
+
+SELECT
+	a.gid AS a_gid,
+	b.gid AS b_gid,
+	ST_Intersection(a.geom, b.geom)
+INTO parcel_intersections
+FROM parcels_reduced a
+JOIN parcels_reduced b
+ON ST_Intersects(a.geom, b.geom)
+WHERE a.gid < b.gid
+AND (
+	ST_Overlaps(a.geom, b.geom)
+	OR ST_Contains(a.geom, b.geom)
+	OR ST_Contains(b.geom, a.geom)
+)
+AND ST_Area(ST_Intersection(a.geom, b.geom)) > 50;
