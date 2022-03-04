@@ -110,7 +110,11 @@ INTO parcels_reduced
 FROM parcels
 GROUP BY geom;
 
-ALTER TABLE parcels_reduced ADD COLUMN gid SERIAL PRIMARY KEY;
+-- -- OLD WAY
+-- ALTER TABLE parcels_reduced ADD COLUMN gid SERIAL PRIMARY KEY;
+-- NEW WAY (apparently better https://wiki.postgresql.org/wiki/Don%27t_Do_This#Don.27t_use_serial)
+ALTER TABLE parcels_reduced
+ADD COLUMN gid integer primary key generated always as identity;
 
 COMMIT;
 
