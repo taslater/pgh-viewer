@@ -236,3 +236,8 @@ FROM parcels_exploded_nodups a
 JOIN parcels_exploded_nodups b
 ON ST_Crosses(a.geom, b.geom)
 GROUP BY a.gid;
+
+-- Segments to polygons, magic
+SELECT (ST_Dump(ST_Polygonize(ST_Node(geom)))).geom
+INTO parcels_polygonized
+FROM split_segments_all;
