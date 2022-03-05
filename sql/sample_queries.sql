@@ -220,3 +220,19 @@ AND (
 	OR ST_Contains(b.geom, a.geom)
 )
 AND ST_Area(ST_Intersection(a.geom, b.geom)) > 50;
+
+
+-- SPLITTING LINE SEGMENTS
+SELECT
+	a.gid,
+	ST_Split(
+		a.geom,
+		ST_CollectionExtract(
+			ST_Collect(array_agg(b.geom))
+		)
+	) AS split_geom
+INTO split_segments
+FROM parcels_exploded_nodups a
+JOIN parcels_exploded_nodups b
+ON ST_Crosses(a.geom, b.geom)
+GROUP BY a.gid;
