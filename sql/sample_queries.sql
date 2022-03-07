@@ -241,3 +241,47 @@ GROUP BY a.gid;
 SELECT (ST_Dump(ST_Polygonize(ST_Node(geom)))).geom
 INTO parcels_polygonized
 FROM split_segments_all;
+
+
+-- Match small polygons with larger neighbors to merge
+WITH ungrouped AS (
+	SELECT
+		a.gid AS small_gid,
+		b.gid AS large_gid,
+		ST_Length(ST_Intersection(a.geom, b.geom)) AS touch_length,
+		ST_Area(b.geom) AS large_area
+	FROM flat_parcels a
+	JOIN flat_parcels b
+	ON ST_Touches(a.geom, b.geom)
+	WHERE (ST_Area(a.geom) < 1)
+	AND (ST_Length(ST_Intersection(a.geom, b.geom)) > 0)
+), maxes AS (
+	SELECT
+		small_gid,
+		MAX(touch_length) AS max_length,
+		MAX(large_area) AS max_area
+	FROM ungrouped
+	GROUP BY (small_gid)
+),
+scores AS (
+	SELECT
+		ungrouped.small_gid,
+		ungrouped.large_gid,
+		100 * ungrouped.touch_length / maxes.max_length +
+			1 * ungrouped.large_area / maxes.max_area AS score
+	FROM ungrouped
+	JOIN maxes
+	ON maxes.small_gid = ungrouped.small_gid
+),
+max_scores AS (
+	SELECT small_gid, MAX(score) AS score
+	FROM scores
+	GROUP BY small_gid
+)
+SELECT
+	scores.small_gid,
+	scores.large_gid
+FROM scores
+JOIN max_scores
+ON scores.small_gid = max_scores.small_gid
+WHERE scores.score = max_scores.score;
