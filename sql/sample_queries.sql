@@ -243,7 +243,7 @@ INTO parcels_polygonized
 FROM split_segments_all;
 
 
--- Match small polygons with larger neighbors to merge
+-- Merges small area polygons with large neighbors
 WITH ungrouped AS (
 	SELECT
 		a.gid AS small_gid,
@@ -253,7 +253,9 @@ WITH ungrouped AS (
 	FROM flat_parcels a
 	JOIN flat_parcels b
 	ON ST_Touches(a.geom, b.geom)
-	WHERE (ST_Area(a.geom) < 1)
+	-- small polygon area limit
+	WHERE (ST_Area(a.geom) < 100)
+	-- neighbors the touch along length > 0 (not point touching)
 	AND (ST_Length(ST_Intersection(a.geom, b.geom)) > 0)
 ), maxes AS (
 	SELECT
@@ -267,6 +269,7 @@ scores AS (
 	SELECT
 		ungrouped.small_gid,
 		ungrouped.large_gid,
+		-- formula to determine best neighbor for merging
 		100 * ungrouped.touch_length / maxes.max_length +
 			1 * ungrouped.large_area / maxes.max_area AS score
 	FROM ungrouped
@@ -277,11 +280,42 @@ max_scores AS (
 	SELECT small_gid, MAX(score) AS score
 	FROM scores
 	GROUP BY small_gid
+),
+merging_gids AS (
+	SELECT
+		scores.small_gid,
+		MIN(scores.large_gid) AS large_gid
+	FROM scores
+	JOIN max_scores
+	ON scores.small_gid = max_scores.small_gid
+	WHERE scores.score = max_scores.score
+	-- 	ensure small geometry is only merged once
+	GROUP BY scores.small_gid
+),
+merged_polys AS (
+	SELECT
+		l.gid AS large_gid,
+		ST_Union(l.geom || array_agg(s.geom)) AS geom
+	FROM merging_gids AS mg
+	LEFT JOIN flat_parcels l
+	ON l.gid = mg.large_gid
+	LEFT JOIN flat_parcels s
+	ON s.gid = mg.small_gid
+	GROUP BY l.gid, l.geom
 )
 SELECT
-	scores.small_gid,
-	scores.large_gid
-FROM scores
-JOIN max_scores
-ON scores.small_gid = max_scores.small_gid
-WHERE scores.score = max_scores.score;
+	fp.gid,
+	CASE
+		WHEN mp.large_gid IS NOT NULL
+			THEN mp.geom
+		ELSE
+			fp.geom
+	END
+INTO parcels_merged
+FROM flat_parcels AS fp
+LEFT JOIN merged_polys AS mp
+ON fp.gid = mp.large_gid
+LEFT JOIN merging_gids AS s
+ON fp.gid = s.small_gid
+-- drop small polygons
+WHERE s.small_gid IS NULL;
