@@ -478,3 +478,49 @@ SELECT
 INTO snapped_parcels
 FROM polys
 GROUP BY gid;
+
+
+-- breaks multipolygons into segments
+-- https://gis.stackexchange.com/questions/174472/in-postgis-how-to-split-linestrings-into-their-individual-segments
+WITH dumped_linestrings AS (
+	SELECT
+		ST_Boundary((ST_Dump(geom)).geom) AS geom
+	FROM snapped_parcels
+	WHERE geom IS NOT NULL
+),
+numbered_linestrings AS (
+	SELECT
+		ROW_NUMBER () OVER () AS id,
+		geom
+	FROM dumped_linestrings
+),
+line_counts AS (
+	SELECT
+		ST_NPoints(geom) - 1 AS cts,
+		id
+	FROM numbered_linestrings
+),
+series AS (
+	SELECT
+		generate_series(1, cts) AS num,
+		id
+	FROM line_counts
+),
+segments AS (
+	SELECT
+		ST_MakeLine(
+			ST_PointN(geom, num), 
+			ST_PointN(geom, num + 1)
+		) as geom
+	FROM series 
+	INNER JOIN numbered_linestrings
+	ON series.id = numbered_linestrings.id
+),
+normalized_segments AS (
+	SELECT ST_Normalize(geom) AS geom
+	FROM segments
+	WHERE geom IS NOT NULL
+)
+SELECT DISTINCT geom
+INTO snapped_parcel_segments
+FROM normalized_segments;
