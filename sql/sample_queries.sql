@@ -358,9 +358,26 @@ INTO clustered_pts
 FROM pt_clusters
 WHERE ST_NumGeometries(geom) > 1;
 
+
 -- Replace clustered points with centroid of cluster
 ALTER TABLE clustered_pts ADD COLUMN centroid geometry(Geometry,2272);
 UPDATE clustered_pts SET centroid = ST_Centroid(clustered_pts.geom);
 
 ALTER TABLE clustered_pts
 ADD COLUMN cluster_id integer primary key generated always as identity;
+
+
+-- get multipolygons with multiple polygons and holes
+WITH dumped_polys AS (
+	SELECT
+		gid, (ST_Dump(geom)).geom
+	FROM parcels_reduced_simplified_05
+)
+SELECT gid, ST_Collect(geom)
+FROM dumped_polys
+WHERE ST_NumInteriorRings(geom) > 0
+GROUP BY gid
+HAVING COUNT(*) > 1
+LIMIT 2;
+
+
