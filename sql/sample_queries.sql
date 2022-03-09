@@ -381,3 +381,100 @@ HAVING COUNT(*) > 1
 LIMIT 2;
 
 
+-- Snapping polygon points to clusters!
+SET max_parallel_workers = 8;
+SET max_parallel_workers_per_gather = 4;
+
+SELECT
+	centroid,
+	(ST_Dump(geom)).geom AS original_pt
+INTO flat_clusters
+FROM clustered_pts;
+
+CREATE INDEX flat_clusters_idx ON flat_clusters USING GIST(original_pt);
+
+
+SELECT
+	gid,
+	(ST_DumpPoints(geom)).*
+INTO prs_05_dumped_pts
+FROM parcels_reduced_simplified_05;
+
+CREATE INDEX prs_05_dumped_pts_idx ON prs_05_dumped_pts USING GIST(geom);
+
+WITH replaced_pts AS
+(
+	SELECT
+		dp.gid,
+		dp.path,
+		CASE
+			WHEN fc.original_pt IS NOT NULL
+				THEN fc.centroid
+			ELSE dp.geom
+		END AS geom
+	FROM prs_05_dumped_pts AS dp
+	LEFT JOIN flat_clusters fc
+	-- ST_DWithin is MUCH faster than ST_Equals
+	ON ST_DWithin(dp.geom, fc.original_pt, 0.0)
+),
+replaced_pts_ordered AS (
+	SELECT
+		gid,
+		-- 	polygons    per multipolygon
+		path[1] AS poly_id,
+		-- 	linestrings per polygon 
+		path[2] AS ls_id,
+		-- 	points      per linestring
+		path[3] AS pt_id,
+		geom
+	FROM replaced_pts
+	ORDER BY
+		gid,
+		path[1],
+		path[2],
+		path[3]
+),
+ls_flat AS (
+	SELECT
+		gid,
+		-- 	polygons per multipolygon
+		poly_id,
+		-- 	linestrings per polygon 
+		ls_id,
+		ST_MakeLine(array_agg(geom)) AS geom
+	FROM replaced_pts_ordered
+	GROUP BY
+		gid,
+		poly_id,
+		ls_id
+	ORDER BY
+		gid,
+		poly_id,
+		ls_id
+),
+ls_arrs AS (
+	SELECT
+		gid,
+		poly_id,
+		array_agg(geom) AS arr
+	FROM ls_flat
+	GROUP BY
+		gid,
+		poly_id
+	ORDER BY
+		gid,
+		poly_id
+),
+polys AS (
+	SELECT
+		gid,
+		poly_id,
+		ST_MakePolygon(arr[1], arr[2:]) AS geom
+	FROM ls_arrs
+)
+SELECT
+	gid,
+	ST_MakeValid(ST_Collect(array_agg(geom))) AS geom
+INTO snapped_parcels
+FROM polys
+GROUP BY gid;
