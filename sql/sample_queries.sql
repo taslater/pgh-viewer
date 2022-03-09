@@ -319,3 +319,48 @@ LEFT JOIN merging_gids AS s
 ON fp.gid = s.small_gid
 -- drop small polygons
 WHERE s.small_gid IS NULL;
+
+
+-- Simplify geometries where points are closer than 0.5 feet
+SELECT
+	gid,
+	pins,
+	ST_Simplify(geom, 0.5) AS geom
+INTO parcels_reduced_simplified_05
+FROM parcels_reduced;
+
+CREATE INDEX parcels_reduced_simplified_05_idx
+ON parcels_reduced_simplified_05
+USING GIST(geom);
+
+
+-- Create clusters of close points
+WITH dumped_pts AS (
+	SELECT
+		gid, (ST_DumpPoints(geom)).*
+	FROM parcels_reduced_simplified_05
+	ORDER BY gid
+),
+grouped_dumped_pts AS (
+	SELECT
+		array_agg(gid || path) AS paths,
+		geom
+	FROM dumped_pts
+	GROUP BY geom
+),
+pt_clusters AS (
+	SELECT
+		unnest(ST_ClusterWithin(geom, 0.4)) AS geom
+	FROM grouped_dumped_pts
+)
+SELECT geom
+INTO clustered_pts
+FROM pt_clusters
+WHERE ST_NumGeometries(geom) > 1;
+
+-- Replace clustered points with centroid of cluster
+ALTER TABLE clustered_pts ADD COLUMN centroid geometry(Geometry,2272);
+UPDATE clustered_pts SET centroid = ST_Centroid(clustered_pts.geom);
+
+ALTER TABLE clustered_pts
+ADD COLUMN cluster_id integer primary key generated always as identity;
