@@ -524,3 +524,26 @@ normalized_segments AS (
 SELECT DISTINCT geom
 INTO snapped_parcel_segments
 FROM normalized_segments;
+
+
+-- splits segments at intersections
+WITH temp_split_segs AS (
+	SELECT
+		a.gid,
+		ST_Collect(b.geom) AS geom
+	FROM snapped_parcel_segments a
+	LEFT JOIN snapped_parcel_segments b
+	ON ST_Crosses(a.geom, b.geom)
+	WHERE a.gid <> b.gid
+	GROUP BY a.gid
+)
+SELECT (ST_Dump(
+	CASE
+		WHEN tss.gid IS NULL
+			THEN sps.geom
+		ELSE tss.geom
+	END)).geom
+INTO snapped_parcel_segments_split
+FROM snapped_parcel_segments sps
+LEFT JOIN temp_split_segs tss
+ON sps.gid = tss.gid;
