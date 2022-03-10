@@ -527,6 +527,7 @@ FROM normalized_segments;
 
 
 -- splits segments at intersections
+-- takes about 3 minutes
 WITH temp_split_segs AS (
 	SELECT
 		a.gid,
@@ -547,3 +548,21 @@ INTO snapped_parcel_segments_split
 FROM snapped_parcel_segments sps
 LEFT JOIN temp_split_segs tss
 ON sps.gid = tss.gid;
+
+
+-- POLYGONIZE
+-- This seems slow?
+-- Why single threaded?
+-- GEOS alternative? Shapely, PyGeos, etc?
+-- Is ST_Node doing the heavy lifting?
+-- Why is it necessary to collect the segments before making nodes?
+-- (It works partially without collecting, but only some polygons are created)
+-- Is it possible to skip segment creation entirely and just use
+-- the boundary linestrings from the multipolygons?
+WITH nodes AS (
+	SELECT ST_Node(ST_Collect(geom)) AS node
+	FROM snapped_parcel_segments_split
+)
+SELECT (ST_Dump(ST_Polygonize(node))).geom
+INTO snapped_parcels_polygonized
+FROM nodes;
