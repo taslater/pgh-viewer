@@ -566,3 +566,21 @@ WITH nodes AS (
 SELECT (ST_Dump(ST_Polygonize(node))).geom
 INTO snapped_parcels_polygonized
 FROM nodes;
+
+
+-- Find parcels with most overlaps for quick experimentation
+SELECT
+	a.gid,
+	COUNT(*),
+	ST_Collect(a.geom || array_agg(b.geom))
+FROM parcels AS a
+JOIN parcels AS b
+ON ST_Intersects(a.geom, b.geom)
+WHERE a.gid <> b.gid
+AND (
+	ST_Overlaps(a.geom, b.geom)
+	OR ST_Contains(a.geom, b.geom)
+	OR ST_Within(a.geom, b.geom)
+)
+GROUP BY a.gid
+ORDER BY COUNT(*) DESC;
