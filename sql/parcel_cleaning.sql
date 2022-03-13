@@ -50,4 +50,15 @@ FROM pt_clusters_flat
 ORDER BY ST_Distance(centroid, geom) DESC;
 
 
+-- polygonize (flatten) fast and easy
+-- PostGIS ST_Node() seems slow
+SET max_parallel_workers = 8;
+SET max_parallel_workers_per_gather = 4;
 
+WITH unioned AS (
+	SELECT ST_Union(ST_Boundary(geom)) AS geom
+	FROM parcels_fixed
+)
+SELECT (ST_Dump(ST_Polygonize(geom))).geom
+INTO parcels_polygonized_2
+FROM unioned;
