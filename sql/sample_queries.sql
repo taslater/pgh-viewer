@@ -588,6 +588,7 @@ ORDER BY COUNT(*) DESC;
 
 -- find slivers
 -- maximum inscribed circle radius
+-- requires about 13 minutes
 ALTER TABLE parcels_polygonized_2
 ADD COLUMN max_inscribed_radius double precision;
 
