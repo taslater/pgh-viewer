@@ -584,3 +584,12 @@ AND (
 )
 GROUP BY a.gid
 ORDER BY COUNT(*) DESC;
+
+
+-- find slivers
+-- maximum inscribed circle radius
+ALTER TABLE parcels_polygonized_2
+ADD COLUMN max_inscribed_radius double precision;
+
+UPDATE parcels_polygonized_2
+SET max_inscribed_radius = (ST_MaximumInscribedCircle(geom)).radius;
