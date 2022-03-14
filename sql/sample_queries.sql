@@ -594,3 +594,41 @@ ADD COLUMN max_inscribed_radius double precision;
 
 UPDATE parcels_polygonized_2
 SET max_inscribed_radius = (ST_MaximumInscribedCircle(geom)).radius;
+
+
+-- after intersecting polygonized w/ original
+-- associate pins (ids) from original to polygonized
+CREATE TABLE flat_pins
+(
+	gid int,
+	parcel_pins text[],
+	geom geometry(Geometry,2272)
+);
+
+INSERT INTO flat_pins(
+	gid,
+	parcel_pins,
+	geom
+)(
+SELECT
+	pp2.gid,
+	array_agg(pf.pin) as parcel_pins,
+	pp2.geom AS geom
+FROM parcel_intersections AS pi
+LEFT JOIN parcels_polygonized_2 AS pp2
+ON pi.flat_gid = pp2.gid
+LEFT JOIN parcels_fixed AS pf
+ON pi.parcel_gid = pf.gid
+-- How many flat polygons??
+-- How many pins per polygon??
+WHERE pp2.max_inscribed_radius > 4
+	AND pi.max_inscribed_radius > 4
+	AND ST_Area(pi.inter_geom) > 30
+	AND (
+		ST_Area(pi.inter_geom) / ST_Area(pf.geom) > 0.05
+		OR ST_Area(pi.inter_geom) / ST_Area(pp2.geom) > 0.25
+	)
+GROUP BY
+	pp2.gid,
+	pp2.geom
+);
