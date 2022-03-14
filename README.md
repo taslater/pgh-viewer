@@ -21,6 +21,10 @@ The server provides mbtiles layers using [mbtileserver](https://github.com/consb
 
 Spatial analysis is performed using [PostGIS](https://postgis.net).
 
+### Vector tilesets
+
+[MBTiles](https://docs.mapbox.com/help/glossary/mbtiles/) are generated using [Tippecanoe](https://github.com/mapbox/tippecanoe).
+
 ### Spatial analysis
 
 [ogr2ogr](https://gdal.org/programs/ogr2ogr.html) is used to load the shapefiles into PostGIS. Shapefiles may contain invalid geometry which can be repaired using [QGIS](https://qgis.org) before loading with `ogr2ogr`.
